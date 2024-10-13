@@ -25,7 +25,7 @@ class ProductController extends Controller implements HasMiddleware
      */
     public function index()
     {
-        return Product::all();
+        return Product::with('category')->get();
     }
 
     /**
@@ -42,6 +42,7 @@ class ProductController extends Controller implements HasMiddleware
             'availability' => 'boolean',
             'size' => 'nullable|in:XS,S,M,L,XL',
             'color' => 'nullable|max:50',
+            'category_id' => 'required|exists:categories,id', // Validate category_id
         ]);
 
         $product = $request->user()->products()->create($fields);
@@ -54,7 +55,7 @@ class ProductController extends Controller implements HasMiddleware
      */
     public function show(Product $product)
     {
-        return $product;
+        return $product->load('category');
     }
 
     /**
@@ -73,6 +74,7 @@ class ProductController extends Controller implements HasMiddleware
             'availability' => 'boolean',
             'size' => 'nullable|in:XS,S,M,L,XL',
             'color' => 'nullable|max:50',
+            'category_id' => 'required|exists:categories,id', // Validate category_id
         ]);
 
         $product->update($fields);
