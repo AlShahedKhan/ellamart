@@ -5,6 +5,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Traits\JsonResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Routing\Controllers\Middleware;
@@ -12,6 +13,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 
 class CategoryController extends Controller implements HasMiddleware
 {
+    use JsonResponseTrait;
 
     public static function middleware()
     {
@@ -19,31 +21,35 @@ class CategoryController extends Controller implements HasMiddleware
             new Middleware('auth:sanctum', except: ['index', 'show']),
         ];
     }
-    /**
-     * Display a listing of all categories.
-     */
+    
     public function index()
     {
-        return Category::all();
+        try {
+            $categories = Category::all();
+            return $this->jsonResponse(200, 'Success', $categories);
+        } catch (\Exception $e) {
+            \Log::error('Fetching categories failed', ['error' => $e->getMessage()]);
+            return $this->jsonResponse(500, 'Failed');
+        }
     }
-
-    /**
-     * Store a newly created category in storage.
-     */
-    // app/Http/Controllers/CategoryController.php
 
     public function store(Request $request)
     {
-        $fields = $request->validate([
-            'name' => 'required|string|max:100|unique:categories,name',
-        ]);
+        try {
+            $fields = $request->validate([
+                'name' => 'required|string|max:100|unique:categories,name',
+            ]);
 
-        // Set user_id to the authenticated user
-        $fields['user_id'] = $request->user()->id;
+            // Set user_id to the authenticated user
+            $fields['user_id'] = $request->user()->id;
 
-        $category = Category::create($fields);
+            $category = Category::create($fields);
 
-        return response()->json($category, 201);
+            return $this->jsonResponse(201, 'Category created successfully', $category);
+        } catch (\Exception $e) {
+            \Log::error('Category creation failed', ['error' => $e->getMessage()]);
+            return $this->jsonResponse(500, 'Failed');
+        }
     }
 
 
@@ -52,7 +58,12 @@ class CategoryController extends Controller implements HasMiddleware
      */
     public function show(Category $category)
     {
-        return $category;
+        try {
+            return $this->jsonResponse(200, 'Success', $category);
+        } catch (\Exception $e) {
+            \Log::error('Fetching category failed', ['error' => $e->getMessage()]);
+            return $this->jsonResponse(500, 'Failed');
+        }
     }
 
     /**
@@ -60,15 +71,20 @@ class CategoryController extends Controller implements HasMiddleware
      */
     public function update(Request $request, Category $category)
     {
-        Gate::authorize('modify', $category);
+        try {
+            Gate::authorize('modify', $category);
 
-        $fields = $request->validate([
-            'name' => 'required|string|max:100|unique:categories,name,' . $category->id,
-        ]);
+            $fields = $request->validate([
+                'name' => 'required|string|max:100|unique:categories,name,' . $category->id,
+            ]);
 
-        $category->update($fields);
+            $category->update($fields);
 
-        return response()->json($category);
+            return $this->jsonResponse(200, 'Category updated successfully', $category);
+        } catch (\Exception $e) {
+            \Log::error('Category update failed', ['error' => $e->getMessage()]);
+            return $this->jsonResponse(500, 'Failed');
+        }
     }
 
     /**
@@ -76,10 +92,15 @@ class CategoryController extends Controller implements HasMiddleware
      */
     public function destroy(Category $category)
     {
-        Gate::authorize('modify', $category);
+        try {
+            Gate::authorize('modify', $category);
 
-        $category->delete();
+            $category->delete();
 
-        return response()->json(['message' => 'Category deleted successfully']);
+            return $this->jsonResponse(200, 'Category deleted successfully');
+        } catch (\Exception $e) {
+            \Log::error('Category deletion failed', ['error' => $e->getMessage()]);
+            return $this->jsonResponse(500, 'Failed');
+        }
     }
 }

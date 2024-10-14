@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Traits\JsonResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Gate;
 
 class ProductController extends Controller implements HasMiddleware
 {
+    use JsonResponseTrait;
     /**
      * Apply middleware to routes.
      */
@@ -25,7 +27,15 @@ class ProductController extends Controller implements HasMiddleware
      */
     public function index()
     {
-        return Product::with('category')->get();
+        try {
+            $product = Product::with('category')->get();
+            return $this->jsonResponse(200,'success', $product);
+        } catch (\Exception $e) {
+            //throw $th;
+            \Log::error("Fetching products failed", ['error' => $e->getMessage()]);
+            return $this->jsonResponse(500,'Failed');
+        }
+        // return Product::with('category')->get();
     }
 
     /**
@@ -33,21 +43,30 @@ class ProductController extends Controller implements HasMiddleware
      */
     public function store(Request $request)
     {
-        $fields = $request->validate([
-            'name' => 'required|max:255',
-            'description' => 'nullable',
-            'vendor' => 'required|max:100',
-            'sku' => 'required|unique:products,sku|max:50',
-            'price' => 'required|numeric|min:0',
-            'availability' => 'boolean',
-            'size' => 'nullable|in:XS,S,M,L,XL',
-            'color' => 'nullable|max:50',
-            'category_id' => 'required|exists:categories,id', // Validate category_id
-        ]);
+        try {
+            $fields = $request->validate([
+                'name' => 'required|max:255',
+                'description' => 'nullable',
+                'vendor' => 'required|max:100',
+                'sku' => 'required|unique:products,sku|max:50',
+                'price' => 'required|numeric|min:0',
+                'availability' => 'boolean',
+                'size' => 'nullable|in:XS,S,M,L,XL',
+                'color' => 'nullable|max:50',
+                'category_id' => 'required|exists:categories,id', // Validate category_id
+            ]);
+    
+            $product = $request->user()->products()->create($fields);
+            
+            return $this->jsonResponse(201,'Product created successfully', $product);
+        } catch (\Exception $e) {
+            //throw $th;
+            \Log::error("Product creation failed", ['error', $e->getMessage()]);
+            return $this->jsonResponse(500,'Failed');
+        }
+        
 
-        $product = $request->user()->products()->create($fields);
-
-        return response()->json($product, 201);
+        // return response()->json($product, 201);
     }
 
     /**
@@ -55,7 +74,13 @@ class ProductController extends Controller implements HasMiddleware
      */
     public function show(Product $product)
     {
-        return $product->load('category');
+        try {
+            $product->load('category');
+            return $this->jsonResponse(200, 'Success', $product);
+        } catch (\Exception $e) {
+            \Log::error("Fetching product failed", ['error' => $e->getMessage()]);
+            return $this->jsonResponse(500, 'Failed');
+        }
     }
 
     /**
@@ -63,23 +88,28 @@ class ProductController extends Controller implements HasMiddleware
      */
     public function update(Request $request, Product $product)
     {
-        Gate::authorize('modify', $product);
+        try {
+            Gate::authorize('modify', $product);
 
-        $fields = $request->validate([
-            'name' => 'required|max:255',
-            'description' => 'nullable',
-            'vendor' => 'required|max:100',
-            'sku' => 'required|unique:products,sku,' . $product->id . '|max:50',
-            'price' => 'required|numeric|min:0',
-            'availability' => 'boolean',
-            'size' => 'nullable|in:XS,S,M,L,XL',
-            'color' => 'nullable|max:50',
-            'category_id' => 'required|exists:categories,id', // Validate category_id
-        ]);
+            $fields = $request->validate([
+                'name' => 'required|max:255',
+                'description' => 'nullable',
+                'vendor' => 'required|max:100',
+                'sku' => 'required|unique:products,sku,' . $product->id . '|max:50',
+                'price' => 'required|numeric|min:0',
+                'availability' => 'boolean',
+                'size' => 'nullable|in:XS,S,M,L,XL',
+                'color' => 'nullable|max:50',
+                'category_id' => 'required|exists:categories,id', // Validate category_id
+            ]);
 
-        $product->update($fields);
+            $product->update($fields);
 
-        return response()->json($product);
+            return $this->jsonResponse(200, 'Product updated successfully', $product);
+        } catch (\Exception $e) {
+            \Log::error("Product update failed", ['error' => $e->getMessage()]);
+            return $this->jsonResponse(500, 'Failed');
+        }
     }
 
     /**
@@ -87,10 +117,15 @@ class ProductController extends Controller implements HasMiddleware
      */
     public function destroy(Product $product)
     {
-        Gate::authorize('modify', $product);
+        try {
+            Gate::authorize('modify', $product);
 
-        $product->delete();
+            $product->delete();
 
-        return response()->json(['message' => 'Product deleted successfully']);
+            return $this->jsonResponse(200, 'Product deleted successfully');
+        } catch (\Exception $e) {
+            \Log::error("Product deletion failed", ['error' => $e->getMessage()]);
+            return $this->jsonResponse(500, 'Failed');
+        }
     }
 }
