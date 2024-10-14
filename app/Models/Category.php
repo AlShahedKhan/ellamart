@@ -11,8 +11,8 @@ class Category extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name','user_id'];
-    
+    protected $fillable = ['name', 'user_id'];
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -21,5 +21,10 @@ class Category extends Model
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function images()
+    {
+        return $this->morphMany(Image::class, 'imageable');
     }
 }
